@@ -2,6 +2,19 @@ import numpy as np
 import cv2
 from Model import ModelManusia
 import time
+import datetime
+import mysql.connector
+
+mydb = mysql.connector.connect(
+  host="localhost",
+  user="root",
+  password="",
+  database="db_people_counter_laravel"
+)
+
+mycursor = mydb.cursor()
+
+print("A" + cv2.__version__);
 
 cnt_up = 0
 cnt_down = 0
@@ -9,7 +22,7 @@ count_up = 0
 count_down = 0
 state = 0
 
-cap = cv2.VideoCapture("http://192.168.100.2:8080/video")
+cap = cv2.VideoCapture(0)
 # Resolusi Kamera : 720x480
 
 for i in range(19):
@@ -21,8 +34,8 @@ frameArea = h * w
 areaTH = frameArea / 300
 
 # Inisialisasi Garis Batas Penghitung
-line_up = int(1 * (h / 2))
-line_down = int(4 * (h / 7))
+line_up = int(1 * (h / 3))
+line_down = int(4 * (h / 6))
 
 up_limit = int(.5 * (h / 5))
 down_limit = int(4.5 * (h / 5))
@@ -41,8 +54,8 @@ pt4 = [w, line_up];
 pts_L2 = np.array([pt3, pt4], np.int32)
 pts_L2 = pts_L2.reshape((-1, 1, 2))
 
-pt5 = [0, up_limit];
-pt6 = [w, up_limit];
+pt5 =  [0, up_limit];
+pt6 =  [w, up_limit];
 pts_L3 = np.array([pt5, pt6], np.int32)
 pts_L3 = pts_L3.reshape((-1, 1, 2))
 pt7 = [0, down_limit];
@@ -111,12 +124,22 @@ while (cap.isOpened()):
                                 print
                             else:
                                 cnt_up += 1;
+                                sql = "DELETE FROM tbl_pengunjungs WHERE id=(SELECT MAX(id) FROM tbl_pengunjungs)"
+                                mycursor.execute(sql)
+
+                                mydb.commit()
                             print("ID Objek:", i.getId(), 'Masuk melalui', time.strftime("%c"))
                         elif i.going_DOWN(line_down, line_up) == True:
                             if w > 100:
                                 count_down = w / 60
                             else:
                                 cnt_down += 1;
+
+                                sql = "INSERT INTO tbl_pengunjungs (id_kamera, status, created_at, updated_at) VALUES (%s, %s, %s, %s)"
+                                val = (1, 1, datetime.datetime.now(), datetime.datetime.now())
+                                mycursor.execute(sql, val)
+
+                                mydb.commit()
                             print("ID Objek:", i.getId(), 'Masuk melalui ', time.strftime("%c"))
                         break
                     if i.getState() == '1':
@@ -138,8 +161,10 @@ while (cap.isOpened()):
     # Inisialisasi Monitor
     for i in persons:
         cv2.putText(frame, str(i.getId()), (i.getX(), i.getY()), font, 0.3, i.getRGB(), 1, cv2.LINE_AA)
-    str_up = 'KELUAR: ' + str(cnt_up)
-    str_down = 'MASUK: ' + str(cnt_down)
+    str_up = 'KELUAR: ' + str(round(cnt_up))
+    str_down = 'MASUK: ' + str(round(cnt_down))
+
+
     frame = cv2.polylines(frame, [pts_L1], False, line_down_color, thickness=2)
     frame = cv2.polylines(frame, [pts_L2], False, line_up_color, thickness=2)
     frame = cv2.polylines(frame, [pts_L3], False, (255, 255, 255), thickness=1)
@@ -156,6 +181,10 @@ while (cap.isOpened()):
     # Listener Untuk Exit Program (Esc)
     k = cv2.waitKey(30) & 0xff
     if k == 27:
+        sql = "DELETE FROM tbl_pengunjungs"
+        mycursor.execute(sql)
+
+        mydb.commit()
         break
 
 # Closing Program
