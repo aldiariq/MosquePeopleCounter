@@ -6,13 +6,21 @@ import datetime
 import mysql.connector
 
 mydb = mysql.connector.connect(
-  host="localhost",
+  host="127.0.0.1",
   user="root",
   password="",
   database="db_people_counter_laravel"
 )
 
 mycursor = mydb.cursor()
+
+mycursor.execute("SELECT tbl_kameras.id, tbl_kameras.nama_kamera,tbl_kameras.channel_kamera, tbl_kameras.status_reverse, tbl_pengaturangaris.x1g1, tbl_pengaturangaris.y1g1, tbl_pengaturangaris.x2g1, tbl_pengaturangaris.y2g1, tbl_pengaturangaris.x1g2, tbl_pengaturangaris.y1g2, tbl_pengaturangaris.x2g2, tbl_pengaturangaris.y2g2 FROM tbl_kameras INNER JOIN tbl_pengaturangaris ON tbl_kameras.id = tbl_pengaturangaris.id_kamera")
+
+row = mycursor.fetchone()
+
+while row is not None:
+    print(row)
+    row = mycursor.fetchone()
 
 print("A" + cv2.__version__);
 
@@ -34,8 +42,8 @@ frameArea = h * w
 areaTH = frameArea / 300
 
 # Inisialisasi Garis Batas Penghitung
-line_up = int(1 * (h / 3))
-line_down = int(4 * (h / 6))
+line_up = int(1 * (h / 2))
+line_down = int(4 * (h / 7))
 
 up_limit = int(.5 * (h / 5))
 down_limit = int(4.5 * (h / 5))
@@ -44,6 +52,7 @@ print("Red line y:"), str(line_down)
 print("Blue line y:"), str(line_up)
 line_down_color = (255, 0, 0)
 line_up_color = (0, 0, 255)
+#       x   y
 pt1 = [0, line_down];
 pt2 = [w, line_down];
 pts_L1 = np.array([pt1, pt2], np.int32)
@@ -176,15 +185,15 @@ while (cap.isOpened()):
 
     # Menampilkan Monitor Penghitung dan Mask
     cv2.imshow('Monitor Penghitung', frame)
-    cv2.imshow('Mask Penghitung',mask)
+    # cv2.imshow('Mask Penghitung',mask)
 
     # Listener Untuk Exit Program (Esc)
     k = cv2.waitKey(30) & 0xff
     if k == 27:
-        sql = "DELETE FROM tbl_pengunjungs"
-        mycursor.execute(sql)
-
-        mydb.commit()
+        # sql = "DELETE FROM tbl_pengunjungs"
+        # mycursor.execute(sql)
+        #
+        # mydb.commit()
         break
 
 # Closing Program
